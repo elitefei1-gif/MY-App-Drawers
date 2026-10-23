@@ -1,0 +1,247 @@
+<title>Tool Drawer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a phone-style home screen. A tile grid of your apps on top, a "someday" shelf of ideas below. */
+:root {
+  --bg: #f4f4f1;
+  --surface: #ffffff;
+  --fg: #1b1d1a;
+  --muted: #646a63;
+  --line: #dcdfd8;
+  --accent: #2b6cb0;
+  --accent-ink: #ffffff;
+  --danger: #b73a2e;
+  /* tile colours */
+  --c-green: #23955a; --c-blue: #2b6cb0; --c-amber: #c98a12; --c-red: #c4483a; --c-plum: #8a4f8f; --c-ink: #33403a;
+  --f-display: "Dela Gothic One", "Zen Kaku Gothic New", system-ui, sans-serif;
+  --f-body: "Zen Kaku Gothic New", "Hiragino Sans", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111311; --surface: #1a1d1a; --fg: #e7e9e5; --muted: #9aa197; --line: #2c312c;
+    --accent: #6aa5e6; --accent-ink: #0b1420; --danger: #e2685b;
+    --c-green: #3fb873; --c-blue: #5b97dc; --c-amber: #dba636; --c-red: #df6a5c; --c-plum: #b07ab5; --c-ink: #7d8c84;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111311; --surface: #1a1d1a; --fg: #e7e9e5; --muted: #9aa197; --line: #2c312c;
+  --accent: #6aa5e6; --accent-ink: #0b1420; --danger: #e2685b;
+  --c-green: #3fb873; --c-blue: #5b97dc; --c-amber: #dba636; --c-red: #df6a5c; --c-plum: #b07ab5; --c-ink: #7d8c84;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--f-body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 56px;
+}
+.wrap { max-width: 760px; margin: 0 auto; display: grid; gap: 32px; }
+h1, h2 { margin: 0; text-wrap: balance; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+header { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
+header h1 { font-family: var(--f-display); font-weight: 400; font-size: 30px; line-height: 1.1; }
+.today { font-family: var(--f-mono); font-size: 13px; color: var(--muted); }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 700; }
+.note { color: var(--muted); font-size: 13px; margin: 0; }
+.notice { border: 1px dashed var(--line); border-radius: 8px; padding: 12px 14px; color: var(--muted); font-size: 14px; }
+
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 15px; font-weight: 500; font-size: 14px; }
+.btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 700; }
+.btn.danger { color: var(--danger); }
+.btn:disabled { opacity: .5; cursor: default; }
+.bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bar .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* App tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 22px 12px; }
+.tile { display: grid; justify-items: center; gap: 8px; text-align: center; text-decoration: none; color: var(--fg); position: relative; min-width: 0; }
+.glyph {
+  width: 68px; height: 68px; border-radius: 20px; display: grid; place-items: center;
+  font-family: var(--f-display); font-size: 30px; color: #fff; background: var(--c-ink);
+}
+.tile:hover .glyph { transform: translateY(-2px); }
+.tile .name { font-weight: 700; font-size: 14px; line-height: 1.3; overflow-wrap: anywhere; }
+.tile .desc { font-size: 12px; color: var(--muted); line-height: 1.35; overflow-wrap: anywhere; }
+.tile.add .glyph { background: transparent; border: 2px dashed var(--line); color: var(--muted); font-family: var(--f-body); font-weight: 400; }
+button.tile { background: none; border: 0; padding: 0; }
+.tile .edit-tools { display: flex; gap: 6px; }
+.tile .edit-tools button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; font-size: 12px; padding: 2px 9px; }
+.tile .edit-tools .del { color: var(--danger); }
+.editing .glyph { animation: wiggle .4s ease-in-out infinite alternate; }
+@keyframes wiggle { from { transform: rotate(-2deg); } to { transform: rotate(2deg); } }
+@media (prefers-reduced-motion: reduce) { .editing .glyph { animation: none; } }
+@media (prefers-reduced-motion: no-preference) { .glyph { transition: transform .15s; } }
+
+/* Forms */
+form.card { display: grid; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+.fields { display: flex; flex-wrap: wrap; gap: 12px; }
+.field { display: grid; gap: 4px; flex: 1 1 200px; min-width: 0; }
+.field.narrow { flex: 0 0 90px; }
+.field.wide { flex-basis: 100%; }
+input[type=text], input[type=url] { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 9px 11px; width: 100%; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatches label { position: relative; }
+.swatches input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.swatches span { display: block; width: 30px; height: 30px; border-radius: 9px; border: 3px solid transparent; }
+.swatches input:checked + span { border-color: var(--fg); }
+.swatches input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.row-end { display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+
+/* Someday shelf */
+.ideas { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-top: 1px solid var(--line); }
+.ideas li { display: flex; gap: 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.ideas .t { flex: 1; min-width: 0; }
+.ideas .t b { font-weight: 700; }
+.ideas .t span { color: var(--muted); font-size: 14px; }
+.ideas .x { background: none; border: 0; color: var(--muted); font-size: 13px; padding: 0 4px; }
+.ideas .x:hover { color: var(--danger); }
+.idea-add { display: flex; gap: 8px; }
+.idea-add input { flex: 1; min-width: 0; }
+
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="label">Your apps</div>
+      <h1>Tool Drawer</h1>
+    </div>
+    <span class="today" id="today"></span>
+  </header>
+  <main id="app" class="wrap" style="gap:36px"><p class="note">Opening your drawer…</p></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const COLORS = ["green", "blue", "amber", "red", "plum", "ink"];
+const S = { db: null, apps: [], ideas: [], editing: false, form: null, ready: false, noDb: false, canWrite: true, confirm: null };
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const app = document.getElementById("app");
+const WD_JP = ["日","月","火","水","木","金","土"];
+{ const d = new Date(); document.getElementById("today").textContent =
+  `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 (${WD_JP[d.getDay()]})`; }
+
+function toast(m) { const t = document.getElementById("toast"); t.textContent = m; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2200); }
+const safeUrl = u => /^https:\/\//i.test(u || "") ? u : "";
+
+function render() {
+  if (!S.ready) return;
+  const apps = [...S.apps].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const ideas = [...S.ideas].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const can = S.canWrite && !S.noDb;
+
+  const tiles = apps.map(a => {
+    const color = COLORS.includes(a.color) ? a.color : "ink";
+    const glyph = `<span class="glyph" style="background:var(--c-${color})" aria-hidden="true">${esc((a.glyph || a.name || "?").slice(0, 2))}</span>
+      <span class="name">${esc(a.name)}</span>${a.desc ? `<span class="desc">${esc(a.desc)}</span>` : ""}`;
+    if (S.editing) {
+      const confirming = S.confirm === a.id;
+      return `<div class="tile">${glyph}<span class="edit-tools">${confirming
+        ? `<button class="del" data-del-yes="${esc(a.id)}">Remove</button><button data-del-no>Keep</button>`
+        : `<button data-edit="${esc(a.id)}">Edit</button><button class="del" data-del="${esc(a.id)}">Remove</button>`}</span></div>`;
+    }
+    const href = safeUrl(a.url);
+    return href ? `<a class="tile" href="${esc(href)}" target="_blank" rel="noopener">${glyph}</a>` : `<div class="tile">${glyph}</div>`;
+  }).join("");
+
+  const empty = !apps.length ? `<p class="note">Nothing here yet. Tap “Add app” and paste the link of any app you've made.</p>` : "";
+
+  let form = "";
+  if (S.form) {
+    const f = S.form;
+    form = `<form class="card" id="appForm">
+      <h2 style="font-size:17px">${f.id ? "Edit app" : "Add an app"}</h2>
+      <div class="fields">
+        <div class="field"><label class="label" for="a-name">Name</label><input type="text" id="a-name" maxlength="40" required value="${esc(f.name)}" placeholder="e.g. Hima Night Finder"></div>
+        <div class="field narrow"><label class="label" for="a-glyph">Symbol</label><input type="text" id="a-glyph" maxlength="2" value="${esc(f.glyph)}" placeholder="暇"></div>
+        <div class="field wide"><label class="label" for="a-url">Link</label><input type="url" id="a-url" required value="${esc(f.url)}" placeholder="https://claude.ai/artifact/…"></div>
+        <div class="field wide"><label class="label" for="a-desc">What it's for</label><input type="text" id="a-desc" maxlength="60" value="${esc(f.desc)}" placeholder="One short line"></div>
+      </div>
+      <div class="field"><span class="label">Colour</span><div class="swatches">${COLORS.map(c => `
+        <label><input type="radio" name="a-color" id="a-color-${c}" value="${c}" ${f.color === c ? "checked" : ""} aria-label="${c}"><span style="background:var(--c-${c})"></span></label>`).join("")}</div></div>
+      <div class="row-end"><span class="note" id="a-msg"></span>
+        <button class="btn" type="button" id="a-cancel">Cancel</button>
+        <button class="btn primary" type="submit">${f.id ? "Save" : "Add to drawer"}</button></div>
+    </form>`;
+  }
+
+  app.innerHTML = `
+    ${S.noDb ? `<div class="notice">Saving isn't available in this view. Open the page in Claude while signed in to see and change your apps.</div>` : ""}
+    <section style="display:grid;gap:18px">
+      <div class="bar"><span class="label">${apps.length} app${apps.length === 1 ? "" : "s"}</span>
+        ${can ? `<div class="actions">${apps.length ? `<button class="btn" id="toggleEdit">${S.editing ? "Done" : "Edit"}</button>` : ""}
+          <button class="btn primary" id="addApp">Add app</button></div>` : ""}</div>
+      <div class="tiles ${S.editing ? "editing" : ""}">${tiles}</div>
+      ${empty}
+      ${form}
+    </section>
+    <section style="display:grid;gap:12px">
+      <div><div class="label">Someday shelf</div><p class="note">Ideas for apps you might build next. Pick one when you're bored and ask Claude to make it.</p></div>
+      ${ideas.length ? `<ul class="ideas">${ideas.map(i => `<li><span class="t"><b>${esc(i.title)}</b>${i.note ? ` <span>· ${esc(i.note)}</span>` : ""}</span>
+        ${can ? `<button class="x" data-idea-del="${esc(i.id)}" aria-label="Remove ${esc(i.title)}">Remove</button>` : ""}</li>`).join("")}</ul>` : `<p class="note">No ideas saved yet.</p>`}
+      ${can ? `<form class="idea-add" id="ideaForm"><input type="text" id="i-title" maxlength="80" placeholder="Add an idea, e.g. Keigo practice" aria-label="New idea"><button class="btn" type="submit">Add</button></form>` : ""}
+    </section>`;
+
+  bind();
+}
+
+function bind() {
+  const $ = id => document.getElementById(id);
+  $("toggleEdit") && ($("toggleEdit").onclick = () => { S.editing = !S.editing; S.confirm = null; render(); });
+  $("addApp") && ($("addApp").onclick = () => { S.form = { name: "", glyph: "", url: "", desc: "", color: COLORS[S.apps.length % COLORS.length] }; render(); $("a-name").focus(); });
+  $("a-cancel") && ($("a-cancel").onclick = () => { S.form = null; render(); });
+  app.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => { const a = S.apps.find(x => x.id === b.dataset.edit); S.form = { ...a }; render(); });
+  app.querySelectorAll("[data-del]").forEach(b => b.onclick = () => { S.confirm = b.dataset.del; render(); });
+  app.querySelectorAll("[data-del-no]").forEach(b => b.onclick = () => { S.confirm = null; render(); });
+  app.querySelectorAll("[data-del-yes]").forEach(b => b.onclick = async () => {
+    try { await S.db.doc("apps/" + b.dataset.delYes).delete(); S.confirm = null; toast("Removed"); } catch (e) { toast("Couldn't remove it. Try again."); }
+  });
+  app.querySelectorAll("[data-idea-del]").forEach(b => b.onclick = async () => {
+    try { await S.db.doc("ideas/" + b.dataset.ideaDel).delete(); } catch (e) { toast("Couldn't remove it. Try again."); }
+  });
+  const af = $("appForm");
+  if (af) af.onsubmit = async e => {
+    e.preventDefault();
+    const url = $("a-url").value.trim();
+    if (!safeUrl(url)) { $("a-msg").textContent = "Use a full link starting with https://"; return; }
+    const id = S.form.id || ("a" + Math.random().toString(36).slice(2, 9));
+    const body = {
+      name: $("a-name").value.trim(), glyph: $("a-glyph").value.trim(), url,
+      desc: $("a-desc").value.trim(), color: (af.querySelector("input[name=a-color]:checked") || {}).value || "ink",
+      order: S.form.order ?? (Math.max(0, ...S.apps.map(a => a.order ?? 0)) + 1)
+    };
+    try { await S.db.doc("apps/" + id).set(body); S.form = null; toast(S.apps.some(a => a.id === id) ? "Saved" : "Added to your drawer"); render(); }
+    catch (err) { $("a-msg").textContent = err && err.code === "invalid_argument" ? "Only you can change this drawer." : "Couldn't save. Try again."; }
+  };
+  const idf = $("ideaForm");
+  if (idf) idf.onsubmit = async e => {
+    e.preventDefault();
+    const title = $("i-title").value.trim(); if (!title) return;
+    try { await S.db.doc("ideas/i" + Math.random().toString(36).slice(2, 9)).set({ title, note: "", order: Math.max(0, ...S.ideas.map(i => i.order ?? 0)) + 1 }); }
+    catch (err) { toast("Couldn't add the idea. Try again."); }
+  };
+}
+
+(async function boot() {
+  const [db, user] = await Promise.all([
+    window.claude?.use ? window.claude.use("db") : null,
+    window.claude?.use ? window.claude.use("user") : null
+  ]);
+  S.ready = true; S.db = db;
+  if (!db) { S.noDb = true; render(); return; }
+  try { if (user) { const owner = await user.isOwner(); if (!owner) S.canWrite = false; } } catch (e) {}
+  render();
+  db.collection("apps").onSnapshot(s => { S.apps = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
+  db.collection("ideas").onSnapshot(s => { S.ideas = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
+})();
+</script>
