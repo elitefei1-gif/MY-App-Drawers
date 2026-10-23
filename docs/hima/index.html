@@ -192,7 +192,7 @@ body { margin: 0; }
 .share { display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
 .share-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .share-row input { flex: 1 1 220px; min-width: 0; font-family: var(--f-mono); font-size: 13px; }
-a.btn { text-decoration: none; display: inline-block; }
+a.btn { text-decoration: none; display: inline-block; color: var(--fg); }
 .name-gate { display: grid; gap: 10px; background: var(--accent-soft); border-radius: 12px; padding: 14px 16px; }
 .name-gate .row { display: flex; gap: 8px; flex-wrap: wrap; }
 .name-gate input { flex: 1 1 200px; min-width: 0; }
@@ -214,7 +214,7 @@ a.btn { text-decoration: none; display: inline-block; }
 <script type="module">
 import { FIREBASE_CONFIG } from "./firebase-config.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, doc, getDoc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ---------- Stations (approximate coordinates, Tokyo area) ----------
 const STATIONS = [
@@ -290,9 +290,10 @@ function toast(msg) {
 }
 
 // ---------- Firebase ----------
+// Long polling keeps live updates working behind school/office networks that break streaming.
 let db = null;
 const configured = FIREBASE_CONFIG && FIREBASE_CONFIG.projectId && !String(FIREBASE_CONFIG.projectId).startsWith("PASTE");
-if (configured) { try { db = getFirestore(initializeApp(FIREBASE_CONFIG)); } catch (e) { db = null; } }
+if (configured) { try { db = initializeFirestore(initializeApp(FIREBASE_CONFIG), { experimentalForceLongPolling: true }); } catch (e) { db = null; } }
 
 // ---------- State ----------
 const params = new URLSearchParams(location.search);
@@ -375,7 +376,17 @@ async function flush() {
 }
 
 // ---------- Plan view ----------
+// Redraws wait while someone is typing in a field, so a friend's update never wipes their input.
+let drawing = false, deferred = false;
 function renderPlan() {
+  const a = document.activeElement;
+  if (drawing || (a && a.tagName === "INPUT" && a.id !== "share-link" && app.contains(a))) { deferred = true; return; }
+  drawing = true;
+  try { drawPlan(); } finally { drawing = false; }
+}
+app.addEventListener("focusout", () => { if (deferred) { deferred = false; setTimeout(renderPlan, 0); } });
+
+function drawPlan() {
   const ev = S.ev;
   if (S.missing) { app.innerHTML = `<div class="notice">This plan doesn't exist or the link is incomplete. Ask your friend to send it again. <a href="./">Start a new plan</a></div>`; return; }
   if (!ev) { app.innerHTML = `<p class="note">Opening plan…</p>`; return; }
@@ -481,7 +492,7 @@ function renderPlan() {
   document.getElementById("nameForm").onsubmit = e => {
     e.preventDefault();
     const v = document.getElementById("nick").value.trim().slice(0, 30); if (!v) return;
-    S.mine.name = v; LS.set("hima.name", v); queueSave(); renderPlan();
+    S.mine.name = v; LS.set("hima.name", v); queueSave(); document.activeElement && document.activeElement.blur(); renderPlan();
   };
   app.querySelectorAll("button.cell").forEach(b => b.onclick = () => {
     const d = b.dataset.date, next = ((S.mine.d[d] || 0) + 1) % 3;
@@ -493,7 +504,7 @@ function renderPlan() {
   if (st) st.onchange = () => {
     const v = st.value.trim(), m = STATION_BY_EN[v.toLowerCase()];
     if (v && !m) { document.getElementById("st-msg").textContent = "Pick a station from the list so Hima can place it on the map."; return; }
-    S.mine.st = m ? m.en : ""; queueSave(); renderPlan();
+    S.mine.st = m ? m.en : ""; queueSave(); st.blur(); renderPlan();
   };
 }
 
