@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // A plan can be opened by anyone who has its link, but plans can't be listed or browsed.
+    match /events/{eventId} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.resource.data.keys().hasOnly(['title', 'dates', 'createdAt'])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 80
+        && request.resource.data.dates is list
+        && request.resource.data.dates.size() <= 45;
+      allow update, delete: if false;
+
+      // Each person's free nights for one plan.
+      match /responses/{responseId} {
+        allow read: if true;
+        allow create, update: if request.resource.data.keys().hasOnly(['name', 'd', 'st', 't'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 30
+          && request.resource.data.d is map
+          && request.resource.data.d.size() <= 45
+          && request.resource.data.st is string
+          && request.resource.data.st.size() <= 40;
+        allow delete: if false;
+      }
+    }
+  }
+}
