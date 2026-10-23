@@ -9,7 +9,7 @@ on claude.ai; this repository keeps the source code as a backup and history.
 | --- | --- | --- |
 | Tool Drawer | Home screen for all my apps, plus a shelf of ideas for the next ones | https://claude.ai/artifact/A92VzpAnvWpYDpC9RH5pdr |
 | Hima Night Finder (暇) | Friends tap the nights they're free; it picks the best night and the fairest station to meet at | https://claude.ai/artifact/WS1vygPn35rgWtXZJbxpfV |
-| Hima Night Finder, public web version | Same app for friends without a Claude account; runs on GitHub Pages with Firebase | https://elitefei1-gif.github.io/my-app-drawers/hima/ (after setup below) |
+| Hima Night Finder, public web version | Same app for friends without a Claude account; runs on GitHub Pages with Firebase | https://elitefei1-gif.github.io/MY-App-Drawers/hima/ (after setup below) |
 
 ## Layout
 
@@ -45,7 +45,7 @@ docs/                          ← served by GitHub Pages
    `docs/hima/firebase-config.js`.
 5. **GitHub Pages:** in this repository, *Settings → Pages*, source
    *Deploy from a branch*, branch `main`, folder `/docs`, *Save*.
-6. Open https://elitefei1-gif.github.io/my-app-drawers/hima/ and start a plan.
+6. Open https://elitefei1-gif.github.io/MY-App-Drawers/hima/ and start a plan.
 
 Anyone with a plan's link can view and reply, and nobody can browse the list
 of plans. People's answers are tied to their browser, so clearing browser data
