@@ -1,0 +1,585 @@
+<title>Hima Night Finder</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow column like a station departure board — plan list, then a plan's grid, best night and meeting spot. */
+:root {
+  --bg: #f3f6f3;
+  --surface: #ffffff;
+  --fg: #16201a;
+  --muted: #5b6a61;
+  --line: #d6ded8;
+  --accent: #23955a;      /* line-colour green */
+  --accent-soft: #d5eedf;
+  --accent-ink: #ffffff;
+  --maybe: #d99a1c;
+  --maybe-soft: #f7e6bf;
+  --weekend: #eef2ee;
+  --danger: #b73a2e;
+  --f-display: "Dela Gothic One", "Zen Kaku Gothic New", system-ui, sans-serif;
+  --f-body: "Zen Kaku Gothic New", "Hiragino Sans", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1310; --surface: #161d18; --fg: #e5ece7; --muted: #95a39a; --line: #2a362e;
+    --accent: #45c27c; --accent-soft: #1d3a29; --accent-ink: #08130c;
+    --maybe: #e6b54a; --maybe-soft: #3d3216; --weekend: #121915; --danger: #e2685b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1310; --surface: #161d18; --fg: #e5ece7; --muted: #95a39a; --line: #2a362e;
+  --accent: #45c27c; --accent-soft: #1d3a29; --accent-ink: #08130c;
+  --maybe: #e6b54a; --maybe-soft: #3d3216; --weekend: #121915; --danger: #e2685b;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--f-body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 780px; margin: 0 auto; display: grid; gap: 28px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand .kanji {
+  font-family: var(--f-display); font-size: 30px; line-height: 1;
+  width: 54px; height: 54px; display: grid; place-items: center;
+  background: var(--accent); color: var(--accent-ink); border-radius: 50%;
+  flex: none;
+}
+.brand h1 { font-family: var(--f-display); font-weight: 400; font-size: 24px; letter-spacing: .01em; }
+.brand p { margin: 0; color: var(--muted); }
+
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 700; }
+.note { color: var(--muted); font-size: 13px; margin: 0; }
+.notice { border: 1px dashed var(--line); border-radius: 8px; padding: 12px 14px; color: var(--muted); font-size: 14px; }
+
+.btn {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
+  padding: 8px 16px; font-weight: 500;
+}
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--danger); }
+.btn:disabled { opacity: .5; cursor: default; }
+.link { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 700; }
+
+/* Plan list */
+.plans { display: grid; gap: 8px; }
+.plan-row {
+  display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+}
+.plan-row:hover { border-color: var(--accent); }
+.plan-row .dot { width: 12px; height: 12px; border-radius: 50%; border: 3px solid var(--accent); flex: none; }
+.plan-row .t { font-weight: 700; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.plan-row .m { font-family: var(--f-mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+form.new { display: grid; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.fields { display: flex; flex-wrap: wrap; gap: 12px; }
+.field { display: grid; gap: 4px; flex: 1 1 160px; min-width: 0; }
+.field.wide { flex-basis: 100%; }
+input[type=text], input[type=date], input[list] {
+  border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 9px 11px; width: 100%;
+}
+.check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.row-end { display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+
+/* Example preview (empty state) */
+.example { display: grid; gap: 10px; }
+.example .mini { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; max-width: 360px; }
+.example .mini span { aspect-ratio: 1; border-radius: 4px; background: var(--surface); border: 1px solid var(--line); }
+.example .mini span.y { background: var(--accent); border-color: var(--accent); }
+.example .mini span.m { background: var(--maybe-soft); border-color: var(--maybe); }
+
+/* Plan view */
+.plan-head { display: grid; gap: 6px; }
+.plan-head h2 { font-size: 26px; font-weight: 700; overflow-wrap: anywhere; }
+.plan-head .meta { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: 13px; }
+.code { font-family: var(--f-mono); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
+
+.best {
+  background: var(--accent); color: var(--accent-ink); border-radius: 14px;
+  padding: 18px 20px; display: grid; gap: 4px;
+}
+.best .label { color: inherit; opacity: .8; }
+.best .date { font-family: var(--f-display); font-size: 34px; line-height: 1.15; }
+.best .date small { font-size: 18px; margin-left: 8px; }
+.best .who { font-size: 14px; opacity: .9; }
+.best.waiting { background: var(--surface); color: var(--fg); border: 1px solid var(--line); }
+.best.waiting .date { font-size: 22px; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); align-items: center; }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 6px; border: 1px solid var(--line); background: var(--surface); }
+.legend i.y { background: var(--accent); border-color: var(--accent); }
+.legend i.m { background: var(--maybe-soft); border-color: var(--maybe); }
+
+.grid-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table.grid { border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; min-width: 100%; }
+.grid th, .grid td { padding: 0; text-align: center; border-bottom: 1px solid var(--line); }
+.grid tr:last-child td { border-bottom: 0; }
+.grid thead th { padding: 8px 2px 6px; font-weight: 500; min-width: 46px; }
+.grid thead th .wd { display: block; font-size: 11px; color: var(--muted); }
+.grid thead th .wd b { font-weight: 700; color: var(--fg); margin-left: 3px; }
+.grid thead th .dn { display: block; font-family: var(--f-mono); font-size: 15px; }
+.grid thead th .mo { display: block; font-family: var(--f-mono); font-size: 10px; color: var(--muted); height: 13px; }
+.grid .wkend { background: var(--weekend); }
+.grid th.name, .grid td.name {
+  position: sticky; left: 0; z-index: 1; background: var(--surface);
+  text-align: left; padding: 8px 12px; min-width: 120px; max-width: 160px;
+  border-right: 1px solid var(--line); font-weight: 500;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.grid td.name .you { font-size: 11px; color: var(--accent); font-weight: 700; margin-left: 4px; }
+.grid tr.me td { background-image: linear-gradient(var(--accent-soft), var(--accent-soft)); background-size: 100% 3px; background-repeat: no-repeat; background-position: bottom; }
+.cell { width: 34px; height: 34px; margin: 6px auto; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); display: grid; place-items: center; font-size: 15px; font-weight: 700; }
+button.cell { padding: 0; }
+button.cell:hover { border-color: var(--accent); }
+.cell.y { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.cell.m { background: var(--maybe-soft); border-color: var(--maybe); color: var(--maybe); }
+.grid tr.tally td { padding: 6px 2px 8px; font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+.grid tr.tally td.top { color: var(--accent); font-weight: 500; }
+.bar { height: 22px; width: 10px; margin: 0 auto 3px; border-radius: 3px; background: var(--line); position: relative; overflow: hidden; }
+.bar span { position: absolute; left: 0; right: 0; bottom: 0; background: var(--accent); }
+.grid th.best-col { box-shadow: inset 0 -3px 0 var(--accent); }
+
+.me-name { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+.me-name .field { flex: 1 1 200px; }
+
+/* Meeting spot */
+.spot { display: grid; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.spot h3 { font-size: 17px; }
+.spot-result { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.sign {
+  border: 3px solid var(--accent); border-radius: 10px; padding: 8px 18px; text-align: center; background: var(--bg); min-width: 150px;
+}
+.sign .jp { font-family: var(--f-display); font-size: 26px; line-height: 1.2; display: block; }
+.sign .en { font-family: var(--f-mono); font-size: 12px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+.trips { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; flex: 1 1 220px; min-width: 0; }
+.trips li { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dotted var(--line); padding-bottom: 3px; }
+.trips .km { font-family: var(--f-mono); color: var(--muted); white-space: nowrap; }
+
+.confirm { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: 14px; }
+
+@media (max-width: 480px) {
+  .best .date { font-size: 28px; }
+  .grid th.name, .grid td.name { min-width: 92px; max-width: 110px; padding: 8px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cell { transition: background-color .12s, border-color .12s; }
+}
+</style>
+
+<div class="wrap">
+  <header class="brand">
+    <div class="kanji" aria-hidden="true">暇</div>
+    <div>
+      <h1>Hima Night Finder</h1>
+      <p>Everyone taps the nights they're free. Hima picks the best one and a station that's fair for everyone.</p>
+    </div>
+  </header>
+  <main id="app"><p class="note">Loading plans…</p></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+// ---------- Stations (approximate coordinates, Tokyo area) ----------
+const STATIONS = [
+  ["Tokyo","東京",35.6812,139.7671],["Shinjuku","新宿",35.6896,139.7006],["Shibuya","渋谷",35.6580,139.7016],
+  ["Ikebukuro","池袋",35.7295,139.7109],["Ueno","上野",35.7138,139.7773],["Shinagawa","品川",35.6285,139.7387],
+  ["Akihabara","秋葉原",35.6984,139.7731],["Ginza","銀座",35.6717,139.7650],["Asakusa","浅草",35.7110,139.7966],
+  ["Ebisu","恵比寿",35.6467,139.7101],["Nakameguro","中目黒",35.6440,139.6990],["Roppongi","六本木",35.6628,139.7314],
+  ["Shimokitazawa","下北沢",35.6616,139.6680],["Meidaimae","明大前",35.6683,139.6505],["Nakano","中野",35.7056,139.6658],
+  ["Koenji","高円寺",35.7054,139.6496],["Ogikubo","荻窪",35.7046,139.6200],["Kichijoji","吉祥寺",35.7031,139.5797],
+  ["Mitaka","三鷹",35.7027,139.5607],["Chofu","調布",35.6519,139.5442],["Kokubunji","国分寺",35.7003,139.4803],
+  ["Fuchu","府中",35.6721,139.4799],["Kunitachi","国立",35.6990,139.4462],["Tachikawa","立川",35.6980,139.4138],
+  ["Seiseki-Sakuragaoka","聖蹟桜ヶ丘",35.6508,139.4469],["Tama-Center","多摩センター",35.6247,139.4245],
+  ["Hachioji","八王子",35.6556,139.3389],["Takao","高尾",35.6420,139.2826],["Haijima","拝島",35.7206,139.3449],
+  ["Ome","青梅",35.7907,139.2580],["Hashimoto","橋本",35.5949,139.3450],["Machida","町田",35.5420,139.4455],
+  ["Shin-Yurigaoka","新百合ヶ丘",35.6038,139.5076],["Futako-Tamagawa","二子玉川",35.6115,139.6268],
+  ["Jiyugaoka","自由が丘",35.6077,139.6688],["Musashi-Kosugi","武蔵小杉",35.5763,139.6596],["Kawasaki","川崎",35.5313,139.6969],
+  ["Yokohama","横浜",35.4660,139.6223],["Tokorozawa","所沢",35.7876,139.4724],["Kawagoe","川越",35.9076,139.4826],
+  ["Omiya","大宮",35.9064,139.6239],["Kitasenju","北千住",35.7497,139.8049],["Kashiwa","柏",35.8622,139.9710],
+  ["Funabashi","船橋",35.7019,139.9850],["Chiba","千葉",35.6130,140.1134],["Maihama","舞浜",35.6365,139.8838]
+].map(([en, jp, lat, lng]) => ({ en, jp, lat, lng }));
+const STATION_BY_EN = Object.fromEntries(STATIONS.map(s => [s.en.toLowerCase(), s]));
+
+function km(a, b) {
+  const R = 6371, rad = x => x * Math.PI / 180;
+  const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+// Fairest spot: the station that keeps the longest trip as short as possible.
+function fairestStation(origins) {
+  let best = null;
+  for (const s of STATIONS) {
+    const trips = origins.map(o => km(o, s));
+    const worst = Math.max(...trips), total = trips.reduce((a, b) => a + b, 0);
+    if (!best || worst < best.worst - 0.01 || (Math.abs(worst - best.worst) <= 0.01 && total < best.total)) best = { s, worst, total };
+  }
+  return best;
+}
+
+// ---------- Dates ----------
+const WD_EN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const WD_JP = ["日","月","火","水","木","金","土"];
+const MO = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const pad = n => String(n).padStart(2, "0");
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parse = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const fmtLong = s => { const d = parse(s); return `${WD_EN[d.getDay()]} ${d.getDate()} ${MO[d.getMonth()]}`; };
+function dateRange(from, to, weekendsOnly) {
+  const out = []; const d = parse(from), end = parse(to);
+  while (d <= end && out.length < 45) {
+    const wd = d.getDay();
+    if (!weekendsOnly || wd === 5 || wd === 6 || wd === 0) out.push(iso(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+
+// ---------- State ----------
+const S = {
+  db: null, user: null, myId: null, isOwner: false, canWrite: true,
+  events: [], responses: {}, names: {}, myDoc: null,
+  view: null, confirmDelete: false, ready: false, noDb: false, error: ""
+};
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const app = document.getElementById("app");
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.h); toast.h = setTimeout(() => { t.hidden = true; }, 2200);
+}
+
+function displayName(id) {
+  const r = S.responses[id];
+  return (r && r.nick) || S.names[id] || "Someone";
+}
+async function resolveNames(ids) {
+  if (!S.user || !ids.length) return;
+  try {
+    const ps = await S.user.profiles(ids);
+    let changed = false;
+    for (const id of ids) { const n = (ps[id] && ps[id].name) || ""; if (S.names[id] !== n) { S.names[id] = n; changed = true; } }
+    if (changed) render();
+  } catch (e) {}
+}
+
+// ---------- My response (one doc per person: responses/<myId>) ----------
+let saveTimer = null, saving = false, pendingSave = false;
+function myPlan(eid) {
+  if (!S.myDoc) S.myDoc = { nick: "", plans: {} };
+  if (!S.myDoc.plans[eid]) S.myDoc.plans[eid] = { d: {}, st: "" };
+  return S.myDoc.plans[eid];
+}
+function queueSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flushSave, 600);
+}
+async function flushSave() {
+  if (!S.db || !S.myId) return;
+  if (saving) { pendingSave = true; return; }
+  saving = true;
+  try {
+    await S.db.doc("responses/" + S.myId).set(JSON.parse(JSON.stringify(S.myDoc)));
+  } catch (e) {
+    if (e && e.code === "invalid_argument") { S.canWrite = false; render(); toast("You can view this plan but not mark nights."); }
+    else toast("Couldn't save just now. Try tapping again.");
+  }
+  saving = false;
+  if (pendingSave) { pendingSave = false; flushSave(); }
+}
+
+// ---------- Rendering ----------
+function render() {
+  if (!S.ready) return;
+  if (S.view) {
+    const ev = S.events.find(e => e.id === S.view);
+    if (ev) return renderPlan(ev);
+    if (S.events.length || S.loadedEvents) { S.view = null; }
+    else { app.innerHTML = `<p class="note">Opening plan…</p>`; return; }
+  }
+  renderHome();
+}
+
+function renderHome() {
+  const evs = [...S.events].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  const today = iso(new Date());
+  const in13 = new Date(); in13.setDate(in13.getDate() + 13);
+  const list = evs.length ? `
+    <section class="plans" aria-label="Plans">
+      <div class="label">Plans</div>
+      ${evs.map(e => {
+        const n = Object.values(S.responses).filter(r => r.plans && r.plans[e.id] && Object.keys(r.plans[e.id].d || {}).length).length;
+        const dates = e.dates || [];
+        return `<button class="plan-row" data-open="${esc(e.id)}">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="t">${esc(e.title)}</span>
+          <span class="m">${dates.length ? esc(fmtLong(dates[0])) + " → " + esc(fmtLong(dates[dates.length - 1])) : ""} · ${n} replied</span>
+        </button>`;
+      }).join("")}
+    </section>` : `
+    <section class="example" aria-label="How it works">
+      <div class="label">No plans yet</div>
+      <p class="note">Start a plan below, then send this page to your friends. Each person taps their free nights, and the best night shows up for everyone. The grid below is only an example.</p>
+      <div class="mini" aria-hidden="true">
+        <span></span><span class="y"></span><span></span><span class="m"></span><span class="y"></span><span class="y"></span><span></span>
+        <span class="y"></span><span class="y"></span><span></span><span></span><span class="y"></span><span class="y"></span><span class="m"></span>
+      </div>
+    </section>`;
+
+  app.innerHTML = `<div class="wrap" style="gap:24px">
+    ${S.noDb ? `<div class="notice">Saving isn't available in this view. Open the page in Claude while signed in to create plans and mark nights.</div>` : ""}
+    ${list}
+    <form class="new" id="newForm">
+      <h2 style="font-size:18px">Start a plan</h2>
+      <div class="fields">
+        <div class="field wide"><label class="label" for="f-title">What's the plan?</label>
+          <input type="text" id="f-title" maxlength="80" placeholder="e.g. Yakiniku after exams" required></div>
+        <div class="field"><label class="label" for="f-from">From</label><input type="date" id="f-from" value="${today}" required></div>
+        <div class="field"><label class="label" for="f-to">To</label><input type="date" id="f-to" value="${iso(in13)}" required></div>
+      </div>
+      <label class="check"><input type="checkbox" id="f-wkend"> Only Fridays, Saturdays and Sundays</label>
+      <div class="row-end">
+        <span class="note" id="f-msg"></span>
+        <button class="btn primary" type="submit" ${S.noDb || !S.canWrite ? "disabled" : ""}>Create plan</button>
+      </div>
+    </form>
+  </div>`;
+
+  app.querySelectorAll("[data-open]").forEach(b => b.onclick = () => openPlan(b.dataset.open));
+  document.getElementById("newForm").onsubmit = createPlan;
+}
+
+function renderPlan(ev) {
+  const dates = ev.dates || [];
+  const mine = S.myDoc && S.myDoc.plans && S.myDoc.plans[ev.id];
+  const others = Object.entries(S.responses)
+    .filter(([id, r]) => id !== S.myId && r.plans && r.plans[ev.id] && Object.keys(r.plans[ev.id].d || {}).length)
+    .map(([id]) => id);
+  const people = (S.myId ? [S.myId] : []).concat(others);
+  const val = (id, date) => {
+    const p = id === S.myId ? mine : S.responses[id]?.plans?.[ev.id];
+    return (p && p.d && p.d[date]) || 0;
+  };
+  const responders = people.filter(id => {
+    const p = id === S.myId ? mine : S.responses[id]?.plans?.[ev.id];
+    return p && Object.keys(p.d || {}).length;
+  });
+
+  // Tally and best night
+  const tally = dates.map(date => {
+    let y = 0, m = 0;
+    for (const id of responders) { const v = val(id, date); if (v === 1) y++; else if (v === 2) m++; }
+    return { date, y, m, score: y * 2 + m };
+  });
+  const top = tally.reduce((b, t) => (!b || t.score > b.score ? t : b), null);
+  const hasBest = top && top.score > 0;
+  const freeNames = hasBest ? responders.filter(id => val(id, top.date) === 1).map(displayName) : [];
+  const maybeNames = hasBest ? responders.filter(id => val(id, top.date) === 2).map(displayName) : [];
+
+  const bestHtml = hasBest ? `
+    <section class="best" aria-live="polite">
+      <span class="label">Best night so far</span>
+      <span class="date">${esc(fmtLong(top.date))}<small>${WD_JP[parse(top.date).getDay()]}曜日</small></span>
+      <span class="who">${top.y} of ${responders.length} free${top.m ? ` · ${top.m} maybe` : ""}${freeNames.length ? ` — ${esc(freeNames.join(", "))}` : ""}${maybeNames.length ? ` (maybe: ${esc(maybeNames.join(", "))})` : ""}</span>
+    </section>` : `
+    <section class="best waiting">
+      <span class="label">Best night</span>
+      <span class="date">Waiting for people to tap their free nights</span>
+      <span class="who">Tap the squares in your row. One tap means free, two taps means maybe.</span>
+    </section>`;
+
+  const maxY = Math.max(1, responders.length);
+  const head = dates.map((d, i) => {
+    const dt = parse(d), wd = dt.getDay();
+    const showMo = i === 0 || dt.getDate() === 1;
+    return `<th class="${wd === 0 || wd === 6 ? "wkend" : ""} ${hasBest && d === top.date ? "best-col" : ""}" scope="col">
+      <span class="mo">${showMo ? MO[dt.getMonth()] : ""}</span>
+      <span class="dn">${dt.getDate()}</span>
+      <span class="wd">${WD_EN[wd]}<b>${WD_JP[wd]}</b></span></th>`;
+  }).join("");
+
+  const rows = people.map(id => {
+    const isMe = id === S.myId;
+    const cells = dates.map(d => {
+      const v = val(id, d), wd = parse(d).getDay();
+      const cls = v === 1 ? "y" : v === 2 ? "m" : "";
+      const sym = v === 1 ? "✓" : v === 2 ? "?" : "";
+      const lbl = `${displayName(id)}, ${fmtLong(d)}: ${v === 1 ? "free" : v === 2 ? "maybe" : "not marked"}`;
+      const inner = isMe && S.canWrite && !S.noDb
+        ? `<button class="cell ${cls}" data-date="${d}" aria-label="${esc(lbl)}. Tap to change.">${sym}</button>`
+        : `<div class="cell ${cls}" aria-label="${esc(lbl)}" role="img">${sym}</div>`;
+      return `<td class="${wd === 0 || wd === 6 ? "wkend" : ""}">${inner}</td>`;
+    }).join("");
+    return `<tr class="${isMe ? "me" : ""}"><td class="name" title="${esc(displayName(id))}">${esc(isMe ? (displayName(id) === "Someone" ? "You" : displayName(id)) : displayName(id))}${isMe ? `<span class="you">YOU</span>` : ""}</td>${cells}</tr>`;
+  }).join("");
+
+  const tallyRow = `<tr class="tally"><td class="name">Free</td>${tally.map(t => `
+    <td class="${parse(t.date).getDay() % 6 === 0 ? "wkend" : ""} ${hasBest && t.date === top.date ? "top" : ""}">
+      <div class="bar"><span style="height:${Math.round((t.y / maxY) * 100)}%"></span></div>${t.y}${t.m ? `<span style="color:var(--maybe)">+${t.m}</span>` : ""}</td>`).join("")}</tr>`;
+
+  // Meeting spot
+  const myStation = (mine && mine.st) || "";
+  const origins = responders.map(id => {
+    const p = id === S.myId ? mine : S.responses[id]?.plans?.[ev.id];
+    const st = p && p.st && STATION_BY_EN[p.st.toLowerCase()];
+    return st ? { id, ...st } : null;
+  }).filter(Boolean);
+  let spotHtml;
+  if (origins.length >= 2) {
+    const f = fairestStation(origins);
+    spotHtml = `<div class="spot-result">
+      <div class="sign"><span class="jp">${esc(f.s.jp)}</span><span class="en">${esc(f.s.en)}</span></div>
+      <ul class="trips">${origins.map(o => `<li><span>${esc(displayName(o.id))} <span class="note">from ${esc(o.en)}</span></span><span class="km">${km(o, f.s).toFixed(1)} km</span></li>`).join("")}</ul>
+    </div>
+    <p class="note">Picks the station where the longest trip is shortest. Distances are straight-line, not train time.</p>`;
+  } else {
+    spotHtml = `<p class="note">Once two or more people add their station, a fair meeting spot appears here.${origins.length === 1 ? " One station so far." : ""}</p>`;
+  }
+
+  const canDelete = S.isOwner || ev.createdBy === S.myId;
+  app.innerHTML = `<div class="wrap" style="gap:22px">
+    <div><button class="link" id="back">← All plans</button></div>
+    <section class="plan-head">
+      <h2>${esc(ev.title)}</h2>
+      <div class="meta">
+        <span>${dates.length} nights · ${esc(fmtLong(dates[0]))} → ${esc(fmtLong(dates[dates.length - 1]))}</span>
+        <span>${responders.length} replied</span>
+        <span>Plan code <span class="code">#${esc(ev.id)}</span> <button class="link" id="copy">Copy</button></span>
+      </div>
+    </section>
+    ${bestHtml}
+    ${!S.canWrite ? `<div class="notice">You can see this plan, but your access doesn't allow marking nights. Ask whoever shared it to give you Contributor access.</div>` : ""}
+    ${S.noDb ? `<div class="notice">Saving isn't available in this view.</div>` : ""}
+    ${S.canWrite && !S.noDb ? `<div class="me-name">
+      <div class="field"><label class="label" for="nick">Your name on this page</label>
+        <input type="text" id="nick" maxlength="30" placeholder="${esc(S.names[S.myId] || "e.g. Aya")}" value="${esc(S.myDoc?.nick || "")}"></div>
+    </div>` : ""}
+    <div class="legend"><span><i class="y"></i>Free</span><span><i class="m"></i>Maybe</span><span><i></i>Can't / not marked</span><span>Tap a square to cycle</span></div>
+    <div class="grid-scroll"><table class="grid">
+      <thead><tr><th class="name" scope="col"><span class="label">Who</span></th>${head}</tr></thead>
+      <tbody>${rows}${tallyRow}</tbody>
+    </table></div>
+
+    <section class="spot">
+      <h3>Where to meet</h3>
+      ${S.canWrite && !S.noDb ? `<div class="field"><label class="label" for="st">Your nearest station</label>
+        <input id="st" list="stations" placeholder="e.g. Hachioji" value="${esc(myStation)}">
+        <datalist id="stations">${STATIONS.map(s => `<option value="${esc(s.en)}">${esc(s.jp)}</option>`).join("")}</datalist>
+        <span class="note" id="st-msg"></span></div>` : ""}
+      ${spotHtml}
+    </section>
+
+    ${canDelete ? `<div class="confirm" id="delWrap">${S.confirmDelete
+      ? `<span>Delete this plan for everyone?</span><button class="btn danger" id="delYes">Delete plan</button><button class="btn ghost" id="delNo">Keep it</button>`
+      : `<button class="btn ghost danger" id="del">Delete plan</button>`}</div>` : ""}
+  </div>`;
+
+  document.getElementById("back").onclick = () => { S.view = null; S.confirmDelete = false; try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} render(); };
+  document.getElementById("copy").onclick = () => {
+    const txt = "#" + ev.id;
+    navigator.clipboard?.writeText(txt).then(() => toast("Copied plan code"), () => toast("Select the code to copy it"));
+  };
+  app.querySelectorAll("button.cell").forEach(b => b.onclick = () => {
+    const p = myPlan(ev.id), d = b.dataset.date;
+    const next = ((p.d[d] || 0) + 1) % 3;
+    if (next) p.d[d] = next; else delete p.d[d];
+    queueSave(); render();
+    const again = app.querySelector(`button.cell[data-date="${d}"]`); again && again.focus();
+  });
+  const nick = document.getElementById("nick");
+  if (nick) nick.onchange = () => { myPlan(ev.id); S.myDoc.nick = nick.value.trim().slice(0, 30); queueSave(); render(); };
+  const st = document.getElementById("st");
+  if (st) st.onchange = () => {
+    const v = st.value.trim(), match = STATION_BY_EN[v.toLowerCase()];
+    if (v && !match) { document.getElementById("st-msg").textContent = "Pick a station from the list so Hima can place it on the map."; return; }
+    myPlan(ev.id).st = match ? match.en : ""; queueSave(); render();
+  };
+  const del = document.getElementById("del");
+  if (del) del.onclick = () => { S.confirmDelete = true; render(); };
+  const delNo = document.getElementById("delNo");
+  if (delNo) delNo.onclick = () => { S.confirmDelete = false; render(); };
+  const delYes = document.getElementById("delYes");
+  if (delYes) delYes.onclick = async () => {
+    try { await S.db.doc("events/" + ev.id).delete(); S.view = null; S.confirmDelete = false; toast("Plan deleted"); render(); }
+    catch (e) { toast("Couldn't delete the plan. Try again."); }
+  };
+}
+
+function openPlan(id) {
+  S.view = id; S.confirmDelete = false;
+  try { history.replaceState(null, "", "#" + id); } catch (e) {}
+  render(); window.scrollTo(0, 0);
+}
+
+async function createPlan(e) {
+  e.preventDefault();
+  const msg = document.getElementById("f-msg");
+  const title = document.getElementById("f-title").value.trim();
+  const from = document.getElementById("f-from").value, to = document.getElementById("f-to").value;
+  const wk = document.getElementById("f-wkend").checked;
+  if (!title || !from || !to) return;
+  if (to < from) { msg.textContent = "The end date is before the start date."; return; }
+  const dates = dateRange(from, to, wk);
+  if (!dates.length) { msg.textContent = "No Fridays, Saturdays or Sundays in that range."; return; }
+  const id = "p" + Math.random().toString(36).slice(2, 9);
+  try {
+    msg.textContent = "Creating…";
+    await S.db.doc("events/" + id).set({ title, dates, createdBy: S.myId || "", createdAt: Date.now() });
+    openPlan(id);
+    toast(dates.length >= 45 ? "Plan created (capped at 45 nights)" : "Plan created");
+  } catch (err) {
+    if (err && err.code === "invalid_argument") { S.canWrite = false; msg.textContent = "Your access doesn't allow creating plans."; }
+    else if (err && err.code === "quota_exceeded") msg.textContent = "Storage is full. Delete an old plan first.";
+    else msg.textContent = "Couldn't create the plan. Try again.";
+  }
+}
+
+// ---------- Boot ----------
+(async function boot() {
+  const h = location.hash.slice(1);
+  if (/^p[a-z0-9]+$/.test(h)) S.view = h;
+  const [db, user] = await Promise.all([
+    window.claude?.use ? window.claude.use("db") : null,
+    window.claude?.use ? window.claude.use("user") : null
+  ]);
+  S.db = db; S.user = user; S.ready = true;
+  if (!db) { S.noDb = true; S.loadedEvents = true; render(); return; }
+  if (user) {
+    try { S.myId = await user.id(); } catch (e) {}
+    try { S.isOwner = !!(await user.isOwner()); } catch (e) {}
+    try { const c = await user.can("data.write"); if (c === false) S.canWrite = false; } catch (e) {}
+  }
+  if (!S.myId) S.canWrite = false;
+  render();
+  db.collection("events").onSnapshot(snap => {
+    S.events = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    S.loadedEvents = true;
+    render();
+  }, () => { S.loadedEvents = true; render(); });
+  db.collection("responses").onSnapshot(snap => {
+    const next = {};
+    for (const d of snap.docs) next[d.id] = d.data();
+    // Keep my local copy authoritative while I'm editing.
+    if (S.myId && next[S.myId] && !S.myDoc) S.myDoc = JSON.parse(JSON.stringify(next[S.myId]));
+    if (S.myId && S.myDoc) next[S.myId] = S.myDoc;
+    S.responses = next;
+    resolveNames(Object.keys(next).filter(id => !(id in S.names)).concat(S.myId && !(S.myId in S.names) ? [S.myId] : []));
+    render();
+  }, () => {});
+})();
+</script>
